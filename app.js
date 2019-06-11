@@ -18,7 +18,7 @@ app.use(bodyParser.urlencoded({
 }));
 
 //////////////Database Stuff//////////////
-const mongodbUrl = "mongodb+srv://admin-sahika:" + process.env.ADMIN_SAHIKA + "@cluster0-l9wx7.mongodb.net/weatherAPI";
+const mongodbUrl = "mongodb+srv://admin-ezgi:" + process.env.ADMIN_EZGI + "@cluster0-l9wx7.mongodb.net/weatherAPI";
 // console.log(mongodbUrl);
 mongoose.connect(mongodbUrl, {
   useNewUrlParser: true,
