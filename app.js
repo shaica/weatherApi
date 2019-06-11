@@ -18,14 +18,17 @@ app.use(bodyParser.urlencoded({
 }));
 
 //////////////Database Stuff//////////////
-
-mongoose.connect("mongodb://localhost:27017/accuAPI", {
-  useNewUrlParser: true
+const mongodbUrl = "mongodb+srv://admin-sahika:" + process.env.ADMIN_SAHIKA + "@cluster0-l9wx7.mongodb.net/weatherAPI";
+// console.log(mongodbUrl);
+mongoose.connect(mongodbUrl, {
+  useNewUrlParser: true,
+  useFindAndModify: false
 });
 
 mongoose.set("useCreateIndex", true);
 
 const forecastSchema = new mongoose.Schema({
+  dataBase: String,
   callDate: Date,
   cityId: String,
   dateTime: Date,
@@ -51,92 +54,94 @@ const Ankara = mongoose.model("Ankara", forecastSchema);
 app.route("/")
   .get(function(req, res) {
 
-  res.render("home", {
-    today: date.getDay(),
-    time: date.getTime()
-  });
-})
+    res.render("home", {
+      today: date.getDay(),
+      time: date.getTime()
+    });
+  })
 
   .post(function(req, res) {
-  const baseUrl = "http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/";
-  const cityName = _.lowerCase(req.body.cityName);
-  switch (cityName) {
-    case "ankara":
-      cityId = 316938;
-      break;
+    const baseUrl = "http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/";
+    const cityName = _.lowerCase(req.body.cityName);
+    switch (cityName) {
+      case "ankara":
+        cityId = 316938;
+        break;
 
-    case "istanbul":
-      cityId = 318251;
-      break;
+      case "istanbul":
+        cityId = 318251;
+        break;
 
-    default:
-      res.render("result", {
-        results: "Hımmm."
-      });
-  }
-  const url = baseUrl + cityId + "?apikey=" + process.env.APIKEY + "&language=en-us&metric=true&details=true";
-  request(url, function(err, response, body) {
-    if (!err) {
-      const data = JSON.parse(body);
-      if (cityName === "istanbul") {
-        data.forEach(function(dateTime) {
-          const forecast12 = new Istanbul({
-            callDate: new Date(),
-            cityId: req.body.cityName,
-            dateTime: dateTime.DateTime,
-            hasPrecipitation: dateTime.HasPrecipitation,
-            precipitationProbability: dateTime.PrecipitationProbability,
-            temperatureValue: dateTime.Temperature.Value,
-            temperatureUnit: dateTime.Temperature.Unit,
-            windSpeed: dateTime.Wind.Speed.Value,
-            windDirection: dateTime.Wind.Direction.Degrees,
-            relativeHumidty: dateTime.RelativeHumidity,
-            rainProbability: dateTime.RainProbability,
-            snowProbability: dateTime.SnowProbability,
-            uvIndex: dateTime.UVIndex,
-            rainValue: dateTime.Rain.Value,
-            snowValue: dateTime.Snow.Value,
-          });
-          forecast12.save();
+      default:
+        res.render("result", {
+          results: "Hımmm."
         });
-      } else if (cityName === "ankara") {
-        data.forEach(function(dateTime) {
-          const forecast12 = new Ankara({
-            callDate: new Date(),
-            cityId: req.body.cityName,
-            dateTime: dateTime.DateTime,
-            hasPrecipitation: dateTime.HasPrecipitation,
-            precipitationProbability: dateTime.PrecipitationProbability,
-            temperatureValue: dateTime.Temperature.Value,
-            temperatureUnit: dateTime.Temperature.Unit,
-            windSpeed: dateTime.Wind.Speed.Value,
-            windDirection: dateTime.Wind.Direction.Degrees,
-            relativeHumidty: dateTime.RelativeHumidity,
-            rainProbability: dateTime.RainProbability,
-            snowProbability: dateTime.SnowProbability,
-            uvIndex: dateTime.UVIndex,
-            rainValue: dateTime.Rain.Value,
-            snowValue: dateTime.Snow.Value,
+    }
+    const url = baseUrl + cityId + "?apikey=" + process.env.APIKEY + "&language=en-us&metric=true&details=true";
+    request(url, function(err, response, body) {
+      if (!err) {
+        const data = JSON.parse(body);
+        if (cityName === "istanbul") {
+          data.forEach(function(dateTime) {
+            const forecast12 = new Istanbul({
+              dataBase: "Accuweather",
+              callDate: new Date(),
+              cityId: req.body.cityName,
+              dateTime: dateTime.DateTime,
+              hasPrecipitation: dateTime.HasPrecipitation,
+              precipitationProbability: dateTime.PrecipitationProbability,
+              temperatureValue: dateTime.Temperature.Value,
+              temperatureUnit: dateTime.Temperature.Unit,
+              windSpeed: dateTime.Wind.Speed.Value,
+              windDirection: dateTime.Wind.Direction.Degrees,
+              relativeHumidty: dateTime.RelativeHumidity,
+              rainProbability: dateTime.RainProbability,
+              snowProbability: dateTime.SnowProbability,
+              uvIndex: dateTime.UVIndex,
+              rainValue: dateTime.Rain.Value,
+              snowValue: dateTime.Snow.Value,
+            });
+            forecast12.save();
           });
-          forecast12.save();
+        } else if (cityName === "ankara") {
+          data.forEach(function(dateTime) {
+            const forecast12 = new Ankara({
+              dataBase: "Accuweather",
+              callDate: new Date(),
+              cityId: req.body.cityName,
+              dateTime: dateTime.DateTime,
+              hasPrecipitation: dateTime.HasPrecipitation,
+              precipitationProbability: dateTime.PrecipitationProbability,
+              temperatureValue: dateTime.Temperature.Value,
+              temperatureUnit: dateTime.Temperature.Unit,
+              windSpeed: dateTime.Wind.Speed.Value,
+              windDirection: dateTime.Wind.Direction.Degrees,
+              relativeHumidty: dateTime.RelativeHumidity,
+              rainProbability: dateTime.RainProbability,
+              snowProbability: dateTime.SnowProbability,
+              uvIndex: dateTime.UVIndex,
+              rainValue: dateTime.Rain.Value,
+              snowValue: dateTime.Snow.Value,
+            });
+            forecast12.save();
+          });
+        }
+        res.render("result", {
+          results: "Başarı!",
+          apiSource: "Accuweather"
         });
       }
-      res.render("result", {
-        results: "Başarı!",
-        apiSource: "Accuweather"
-      });
-    }
+    });
   });
-});
 
 app.route("/result")
-  .get(function(req, res){
+  .get(function(req, res) {
     res.render("result", {
       results: "Başarı!",
       apiSource: "Accu"
     });
   })
-  .post(function(req,res){
+  .post(function(req, res) {
     res.redirect("/");
   });
 
