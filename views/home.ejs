@@ -1,0 +1,31 @@
+<%- include('partials/header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12 col-sm-12 col-md-6 center">
+      <h1><i class="fas fa-temperature-low"></i></h1>
+      <h1>Merhaba Ezgi</h1>
+    <p>Bugün günlerden <%= today %>.</p>
+    <p>Saat <%= time %>.</p>
+      <form class="" action="/" method="post">
+        <div class="form-group">
+          <select class="form-control" name="apiSource">
+            <option selected>Bir kaynak site seç.</option>
+            <option value="accuweather">Accuweather</option>
+            <option value="">Yapılacak</option>
+          </select>
+          <select class="form-control" name="cityName">
+            <option selected>Bir şehir seç.</option>
+            <option value="istanbul">İstanbul</option>
+            <option value="ankara">Ankara</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <button class="btn btn-primary btn-block btn-color" type="submit" name="button">Veri çek</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

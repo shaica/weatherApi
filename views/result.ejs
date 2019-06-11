@@ -1,0 +1,24 @@
+<%- include("partials/header") %>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12 col-sm-12 col-md-6 center">
+      <% if (results === "Başarı!") { %>
+        <h1><i class="far fa-sun"></i></h1>
+        <h1><%= results %></h1>
+        <p>Veri <%= apiSource %> sitesinden başarıyla çekildi.</p>
+      <% } else { %>
+        <h1><i class="fas fa-bolt"></i></h1>
+        <h1><%= results %></h1>
+        <p>Bir şeyler oldu ama ne oldu biz de anlamadık.</p>
+    <%  } %>
+
+      <form class="" action="/result" method="post">
+        <button class="btn btn-primary btn-block btn-color" type="submit" name="button">Yeni bir veri çek</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<%- include("partials/footer") %>

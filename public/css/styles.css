@@ -1,0 +1,44 @@
+body {
+  background-color: #ffd7e8;
+  font-family: 'Fjalla One', sans-serif;
+  font-family: 'Average', serif;
+  text-align: center;
+  margin: auto;
+}
+
+.btn-color {
+  background-color: #866ec7;
+  border: #866ec7;
+}
+
+.btn-color:hover {
+  background-color: #f54291;
+}
+
+.center {
+  margin: 5rem auto 0;
+}
+
+/* // Extra small devices (portrait phones, less than 576px)
+// No media query for `xs` since this is the default in Bootstrap
+
+// Small devices (landscape phones, 576px and up) */
+@media (min-width: 576px) {
+  .center {
+    margin: 5rem auto 0;
+  }
+}
+
+/* // Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) {
+  .center {
+    margin: 7rem auto 0;
+  }
+}
+
+/* // Large devices (desktops, 992px and up) */
+@media (min-width: 992px) {
+  .center {
+    margin: 10rem auto 0;
+  }
+}
