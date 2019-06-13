@@ -1,9 +1,20 @@
 body {
   background-color: #ffd7e8;
-  font-family: 'Fjalla One', sans-serif;
   font-family: 'Average', serif;
   text-align: center;
   margin: auto;
+}
+
+input {
+  text-align: center;
+}
+
+nav {
+  background-color: #bf9fee;
+}
+
+select {
+  text-align-last: center;
 }
 
 .btn-color {
@@ -19,6 +30,21 @@ body {
   margin: 5rem auto 0;
 }
 
+.image {
+  width: 4rem;
+  margin: 1rem;
+}
+
+.navbar-image {
+  width: 2rem;
+  margin: auto 0;
+  vertical-align: text-bottom;
+}
+
+a.navbar-brand{
+  color: #313131;
+  font-size: 2rem;
+}
 /* // Extra small devices (portrait phones, less than 576px)
 // No media query for `xs` since this is the default in Bootstrap
 
