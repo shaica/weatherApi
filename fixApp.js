@@ -4,16 +4,13 @@ require("dotenv").config();
 const express = require("express");
 const _ = require("lodash");
 const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
 const ejs = require("ejs");
-const request = require("request");
 const date = require(__dirname + "/date.js");
-const session = require("express-session");
-const passport = require("passport");
-const passportLocalMongoose = require("passport-local-mongoose");
-const findOrCreate = require("mongoose-findOrCreate");
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt"); //hashing and salting password
 
 const app = express();
+const saltRounds = 10;
 
 app.use(express.static("public"));
 app.set("view engine", "ejs");
@@ -22,14 +19,6 @@ app.use(bodyParser.urlencoded({
 }));
 
 //Cookies and Sessions
-app.use(session({
-  secret: process.env.SECRET,
-  resave: false,
-  saveUninitialized: true
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
 
 
 //Database stuff
@@ -69,6 +58,8 @@ const forecastSchema = new mongoose.Schema({
   rainValue: Number,
   snowValue: Number,
 });
+//Database encryption
+
 
 //mongoose models
 
@@ -79,56 +70,72 @@ const Istanbul = mongoose.model("Istanbul", forecastSchema);
 const Ankara = mongoose.model("Ankara", forecastSchema);
 
 //mongoose plugins
-userSchema.plugin(passportLocalMongoose);
-userSchema.plugin(findOrCreate);
 
-//passport-local-mongoose serializeuser
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
 
-//passport-native serialize user
-// passport.serializeUser(function(user, done) {
-//   done(null, user.id);
-// });
-//
-// passport.deserializeUser(function(id, done) {
-//   User.findById(id, function(err, user) {
-//     done(err, user);
-//   });
-// });
+
+
 
 //Routes
+app.route("/register")
+  .get(function(req, res) {
+    res.render("register");
+  })
+  .post(function(req, res) {
+    bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+      const newUser = new User({
+        username: req.body.username,
+        password: hash
+      });
+      newUser.save(function(err) {
+        if (err) {
+          console.log(err);
+        } else {
+          res.render("home", {
+            username: username,
+            today: date.getDay(),
+            time: date.getTime() // FIXME: GMT +3 doesn't show
+          });
+        }
+      });
+    });
+  });
+
 app.route("/login")
-  .get(function(req, res){
+  .get(function(req, res) {
     res.render("login");
   })
+  .post(function(req, res) {
+    const userName = req.body.username;
+    const password = req.body.password;
 
-  .post(function(req, res){
-    passport.authenticate("local", {
-      successRedirect: "/",
-      failureRedirect: "/login",
-      failureFlash: "Geçersiz şifre veya kullanıcı adı.",
-      successFlash: "Hoşgeldiniz."
+    User.findOne({
+      username: userName
+    }, function(err, foundUser) {
+      if (err) {
+        console.log(err);
+      } else {
+        if (foundUser) {
+          bcrypt.compare(password, foundUser.password, function(err, result) {
+            if (result === true) {
+              res.render("home", {
+                username: _.capitalize(userName),
+                today: date.getDay(),
+                time: date.getTime() // FIXME: GMT +3 doesn't show
+              });
+            }
+          });
+        }
+      }
     });
   });
 
 
-app.route("/")
-  .get(function(req, res){
-    if (req.isAuthenticated()) {
-      res.render("home", {
-        today: date.getDay(),
-        time: date.getTime()// FIXME: GMT +3 doesn't show
-      });
-    } else {
-      res.redirect("/login");
-    }
-  });
+
 //listen
 let port = process.env.PORT;
 if (port == null || port == "") {
   port = 4000;
 }
-app.listen(port, function(){
+app.listen(port, function() {
   console.log("Server started on port " + port + ".");
 });

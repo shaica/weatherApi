@@ -25,7 +25,8 @@ app.use(bodyParser.urlencoded({
 app.use(session({
   secret: process.env.SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: true,
+
 }));
 
 app.use(passport.initialize());
@@ -91,15 +92,9 @@ passport.deserializeUser(function(id, done) {
     done(err, user);
   });
 });
-//create users:
-const user = new User({
-  username: "sahika",
-  password: "sha2nh0wlu"
-});
 
-user.save();
 
-// TODO: create login page
+
 app.route("/login")
   .get(function(req, res){
     res.render("login");

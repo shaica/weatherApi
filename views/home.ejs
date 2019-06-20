@@ -1,10 +1,10 @@
-<%- include('partials/header') %>
+<%- include('partials/header'); %>
 
 <div class="container-fluid">
   <div class="row">
     <div class="col-12 col-sm-12 col-md-6 center">
       <h1><i class="fas fa-temperature-low"></i></h1>
-      <h1>Merhaba Ezgi</h1>
+      <h1>Merhaba <%= username %></h1>
     <p>Bugün günlerden <%= today %>.</p>
     <p>Saat <%= time %>.</p>
       <form class="" action="/" method="post">
@@ -28,4 +28,4 @@
   </div>
 </div>
 
-<%- include('partials/footer') %>
+<%- include('partials/footer'); %>
