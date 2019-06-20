@@ -33,7 +33,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 ///Cookies and stuff -END-
 
-// TODO: Add Authentication
+
 // TODO: Add pull data as csv file
 // FIXME: Fix env variables in heroku APP
 //////////////Database Stuff//////////////
