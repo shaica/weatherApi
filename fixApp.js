@@ -7,10 +7,10 @@ const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const date = require(__dirname + "/date.js");
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt"); //hashing and salting password
+//const bcrypt = require("bcrypt"); //hashing and salting password - unneccsary when passport authentication
 
 const app = express();
-const saltRounds = 10;
+//const saltRounds = 10; //bcrypt - unneccsary when passport authentication
 
 app.use(express.static("public"));
 app.set("view engine", "ejs");
@@ -58,8 +58,6 @@ const forecastSchema = new mongoose.Schema({
   rainValue: Number,
   snowValue: Number,
 });
-//Database encryption
-
 
 //mongoose models
 
@@ -81,23 +79,7 @@ app.route("/register")
     res.render("register");
   })
   .post(function(req, res) {
-    bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
-      const newUser = new User({
-        username: req.body.username,
-        password: hash
-      });
-      newUser.save(function(err) {
-        if (err) {
-          console.log(err);
-        } else {
-          res.render("home", {
-            username: username,
-            today: date.getDay(),
-            time: date.getTime() // FIXME: GMT +3 doesn't show
-          });
-        }
-      });
-    });
+
   });
 
 app.route("/login")
@@ -105,28 +87,7 @@ app.route("/login")
     res.render("login");
   })
   .post(function(req, res) {
-    const userName = req.body.username;
-    const password = req.body.password;
 
-    User.findOne({
-      username: userName
-    }, function(err, foundUser) {
-      if (err) {
-        console.log(err);
-      } else {
-        if (foundUser) {
-          bcrypt.compare(password, foundUser.password, function(err, result) {
-            if (result === true) {
-              res.render("home", {
-                username: _.capitalize(userName),
-                today: date.getDay(),
-                time: date.getTime() // FIXME: GMT +3 doesn't show
-              });
-            }
-          });
-        }
-      }
-    });
   });
 
 
