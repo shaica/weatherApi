@@ -30,6 +30,10 @@ select {
   margin: 5rem auto 0;
 }
 
+.form-control {
+  margin: 1rem 0;
+}
+
 .image {
   width: 4rem;
   margin: 1rem;
@@ -49,22 +53,16 @@ a.navbar-brand{
 // No media query for `xs` since this is the default in Bootstrap
 
 // Small devices (landscape phones, 576px and up) */
-@media (min-width: 576px) {
-  .center {
-    margin: 5rem auto 0;
-  }
-}
+/* @media (min-width: 576px) {
+
+} */
 
 /* // Medium devices (tablets, 768px and up) */
-@media (min-width: 768px) {
-  .center {
-    margin: 7rem auto 0;
-  }
-}
+/* @media (min-width: 768px) {
+
+} */
 
 /* // Large devices (desktops, 992px and up) */
-@media (min-width: 992px) {
-  .center {
-    margin: 10rem auto 0;
-  }
-}
+/* @media (min-width: 992px) {
+
+} */
