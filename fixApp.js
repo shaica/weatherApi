@@ -6,8 +6,11 @@ const _ = require("lodash");
 const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const date = require(__dirname + "/date.js");
+const request = require("request");
 const mongoose = require("mongoose");
+const csv = require("express-csv");
 const session = require("express-session");
+const FileStore = require("session-file-store")(session);
 const passport = require("passport");
 const passportLocalMongoose = require("passport-local-mongoose"); //passport-local is required by this package so we don't need to re-require it.
 
@@ -22,9 +25,10 @@ app.use(bodyParser.urlencoded({
 //Cookies and Sessions
 //setting up the session
 app.use(session({
+  store: new FileStore(),
   secret: process.env.SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: true
 }));
 //initialize and start using passport
 app.use(passport.initialize());
@@ -136,7 +140,7 @@ app.route("/login")
     });
   });
 
-app.get("/logout", function(req, res) { //TODO: add logout button
+app.get("/logout", function(req, res) {
   req.logout();
   res.redirect("/login");
 });
@@ -166,78 +170,26 @@ app.route("/")
       res.redirect("/login");
     }
   })
+
   .post(function(req, res) {
-    const baseUrl = "http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/";
+    const apiSource = _.capitalize(req.body.apiSource);
     const cityName = _.lowerCase(req.body.cityName);
+    if (cityName === "ankara")
     switch (cityName) {
       case "ankara":
         cityId = 316938;
         break;
-
       case "istanbul":
         cityId = 318251;
         break;
-
       default:
         res.render("result", {
+          route: "result",
           results: "Hımmm."
         });
     }
-    const url = baseUrl + cityId + "?apikey=" + process.env.ACCUWEATHER_APIKEY + "&language=en-us&metric=true&details=true";
-    request(url, function(err, response, body) {
-      if (!err) {
-        const data = JSON.parse(body);
-        if (cityName === "istanbul") {
-          data.forEach(function(dateTime) {
-            const forecast12 = new Istanbul({
-              dataBase: "Accuweather", //TODO: Add new apiSources and update collection model
-              callDate: new Date(),
-              cityId: req.body.cityName,
-              dateTime: dateTime.DateTime,
-              hasPrecipitation: dateTime.HasPrecipitation,
-              precipitationProbability: dateTime.PrecipitationProbability,
-              temperatureValue: dateTime.Temperature.Value,
-              temperatureUnit: dateTime.Temperature.Unit,
-              windSpeed: dateTime.Wind.Speed.Value,
-              windDirection: dateTime.Wind.Direction.Degrees,
-              relativeHumidty: dateTime.RelativeHumidity,
-              rainProbability: dateTime.RainProbability,
-              snowProbability: dateTime.SnowProbability,
-              uvIndex: dateTime.UVIndex,
-              rainValue: dateTime.Rain.Value,
-              snowValue: dateTime.Snow.Value,
-            });
-            forecast12.save();
-          });
-        } else if (cityName === "ankara") {
-          data.forEach(function(dateTime) {
-            const forecast12 = new Ankara({
-              dataBase: "Accuweather", //TODO: Add new apiSources and update collection model
-              callDate: new Date(),
-              cityId: req.body.cityName,
-              dateTime: dateTime.DateTime,
-              hasPrecipitation: dateTime.HasPrecipitation,
-              precipitationProbability: dateTime.PrecipitationProbability,
-              temperatureValue: dateTime.Temperature.Value,
-              temperatureUnit: dateTime.Temperature.Unit,
-              windSpeed: dateTime.Wind.Speed.Value,
-              windDirection: dateTime.Wind.Direction.Degrees,
-              relativeHumidty: dateTime.RelativeHumidity,
-              rainProbability: dateTime.RainProbability,
-              snowProbability: dateTime.SnowProbability,
-              uvIndex: dateTime.UVIndex,
-              rainValue: dateTime.Rain.Value,
-              snowValue: dateTime.Snow.Value,
-            });
-            forecast12.save();
-          });
-        }
-        res.render("result", {
-          results: "Başarı!",
-          apiSource: "Accuweather" // TODO: call from variable apiSource
-        });
-      }
-    });
+    //TODO: home post route
+
   });
 
 
@@ -252,20 +204,15 @@ app.route("/download")
       res.redirect("/login");
     }
   })
+
   .post(function(req, res) {
-    const csvData = { //TODO: add date validation!
-      startDate: req.body.startDate,
-      endDate: req.body.endDate,
-      apiSource: req.body.apiSource,
-      cityName: req.body.cityName
-    };
-    console.log(csvData);
-    res.render("result", { //TODO: add err handling
-      route: "result",
-      results: "Başarı!",
-      apiSource: "Accuweather" // TODO: call from variable apiSource
-    });
+    //TODO: download post route
   });
+
+
+app.post("/result", function(req, res) {
+  res.redirect("/");
+});
 
 //listen
 let port = process.env.PORT;
