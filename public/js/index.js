@@ -1,7 +1,7 @@
 //jshint esversion:6
 
 
-//Download date validation
+//Date validation for download route
 const sDate = $("#startDate").change(function(){});
 
 $("#endDate").change(function(event){

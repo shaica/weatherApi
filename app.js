@@ -4,14 +4,18 @@ require("dotenv").config();
 const express = require("express");
 const _ = require("lodash");
 const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
 const ejs = require("ejs");
-const request = require("request");
 const date = require(__dirname + "/date.js");
+const request = require("request");
+const mongoose = require("mongoose");
 const session = require("express-session");
+const FileStore = require("session-file-store")(session);
 const passport = require("passport");
-const passportLocalMongoose = require("passport-local-mongoose");
-const findOrCreate = require("mongoose-findOrCreate");
+const passportLocalMongoose = require("passport-local-mongoose"); //passport-local is required by this package so we don't need to re-require it.
+const myCsv = require(__dirname + "/csv-map.js");
+const csv = require("express-csv");
+
+
 
 const app = express();
 
@@ -21,34 +25,33 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 
-///Cookies and stuff
+//Cookies and Sessions
+//setting up the session
 app.use(session({
+  store: new FileStore(),
   secret: process.env.SECRET,
   resave: false,
-  saveUninitialized: true,
-
+  saveUninitialized: true
 }));
-
+//initialize and start using passport
 app.use(passport.initialize());
+//to use passport to set up and manage session
 app.use(passport.session());
-///Cookies and stuff -END-
 
 
-// TODO: Add pull data as csv file
-// FIXME: Fix env variables in heroku APP
-//////////////Database Stuff//////////////
-
-//const mongodbUrl = "mongodb+srv://admin-ezgi:" + process.env.ADMIN_EZGI + "@cluster0-l9wx7.mongodb.net/weatherAPI"; // NOTE: Uncomment before going live
-// TODO: Mongodb Connect via env variable
-// TODO: Mongodb connect via user login info
-// mongoose.connect(mongodbUrl, {
+//Database stuff
+//connect to db
+mongoose.connect("mongodb://localhost:27017/accuAPI", {
+  useNewUrlParser: true,
+  useCreateIndex: true
+});
+//NOTE: Uncomment before heroku
+//const mongodbUrl = "mongodb+srv://admin-ezgi:" + process.env.ADMIN_EZGI + "@cluster0-l9wx7.mongodb.net/weatherAPI";
+//mongoose.connect(mongodbUrl, {
 //   useNewUrlParser: true,
-//   useFindAndModify: false
-// }); // NOTE: Uncomment before going live
-
-mongoose.connect("mongodb://localhost:27107/accuAPI", {useNewUrlParser: true}); // NOTE: comment before going live
-mongoose.set("useCreateIndex", true);
-
+//   useFindAndModify: false,
+//   useCreateIndex: true
+// });
 
 //mongoose schemas
 const userSchema = new mongoose.Schema({
@@ -73,149 +76,307 @@ const forecastSchema = new mongoose.Schema({
   uvIndex: Number,
   rainValue: Number,
   snowValue: Number,
+  ozone: Number
 });
 
-userSchema.plugin(passportLocalMongoose);
-userSchema.plugin(findOrCreate);
+//mongoose plugins
+userSchema.plugin(passportLocalMongoose); //to hash and salt passwords
+
 //mongoose models
+
 const User = mongoose.model("User", userSchema);
+
+passport.use(User.createStrategy()); //the local strategy for authenticating users using username and password, and also to serialize and deserialize a user.
+
+//serilize and deserializeUser only neccesary when using sessions. serializeUser creates the cookie for authentication and deserializeUser uses the information in the Cookie
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 const Istanbul = mongoose.model("Istanbul", forecastSchema);
+
 const Ankara = mongoose.model("Ankara", forecastSchema);
 
-/////Database Stuff -END-
-passport.serializeUser(function(user, done) {
-  done(null, user.id);
-});
 
-passport.deserializeUser(function(id, done) {
-  User.findById(id, function(err, user) {
-    done(err, user);
+//Authentication Routes
+app.route("/register")
+  .get(function(req, res) {
+    const route = "register";
+    res.render("register", {
+      route: route
+    });
+  })
+  .post(function(req, res) {
+    User.register({
+      username: req.body.username
+    }, req.body.password, function(err, user) {
+      if (err) {
+        console.log(err);
+        res.redirect("/register");
+      } else {
+        passport.authenticate("local")(req, res, function() { //this callback function is only triggered if the authentication is successful and a cookie with current login session is created.
+          res.redirect("/"); //because there is a authentication process we can use the route instead of rendering the ejs. And set up the route so that it can be only viewed iff the authentication session is still available.
+        });
+      }
+    }); //this method comes from passportLocalMongoose -create and save a user
   });
-});
-
-
 
 app.route("/login")
-  .get(function(req, res){
-    res.render("login");
+  .get(function(req, res) {
+    const route = "login";
+    res.render("login", {
+      route: route
+    });
   })
-  .post(function(req, res){
-    const user = new User({
+  .post(function(req, res) {
+    const user = User({
       username: req.body.username,
       password: req.body.password
     });
-
-    req.login(user, function(err) {
+    req.login(user, function(err) { //login method comes from passport
       if (err) {
         console.log(err);
+        res.redirect("/login");
       } else {
-        passport.authenticate("local")(req,res,function(){
+        passport.authenticate("local")(req, res, function() {
           res.redirect("/");
         });
       }
     });
   });
 
+app.get("/logout", function(req, res) {
+  req.logout();
+  res.redirect("/login");
+});
+
+
+//Authenticated Routes
 app.route("/")
   .get(function(req, res) {
+    const route = "home";
+    const days = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+    const months = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+    const dateObject = new Date();
+    const today = days[dateObject.getDay()];
+    const date = dateObject.getDate().toString() + " " + months[dateObject.getMonth()] + " " + dateObject.getFullYear().toString();
+    const time = dateObject.toTimeString("tr");
 
-    res.render("home", {
-      today: date.getDay(),
-      time: date.getTime()// FIXME: GMT +3 doesn't show
-    });
+    if (req.isAuthenticated()) {
+      res.render("home", {
+        route: route,
+        username: req.user.username,
+        date: date,
+        today: today,
+        time: time
+      });
+    } else {
+      //the user is not authenticated (not logged in)
+      res.redirect("/login");
+    }
   })
 
   .post(function(req, res) {
-    const baseUrl = "http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/";
-    const cityName = _.lowerCase(req.body.cityName);
+    const apiSource = _.camelCase(req.body.apiSource);
+    const cityName = _.camelCase(req.body.cityName);
     switch (cityName) {
       case "ankara":
         cityId = 316938;
+        lat = 39.9;
+        lon = 32.8;
         break;
-
       case "istanbul":
         cityId = 318251;
+        lat = 41.0;
+        lon = 28.9;
         break;
-
       default:
         res.render("result", {
+          route: "result",
           results: "Hımmm."
         });
     }
-    const url = baseUrl + cityId + "?apikey=" + process.env.ACCUWEATHER_APIKEY + "&language=en-us&metric=true&details=true";
-    request(url, function(err, response, body) {
-      if (!err) {
-        const data = JSON.parse(body);
-        if (cityName === "istanbul") {
-          data.forEach(function(dateTime) {
-            const forecast12 = new Istanbul({
-              dataBase: "Accuweather", //TODO: Add new apiSources and update collection model
-              callDate: new Date(),
-              cityId: req.body.cityName,
-              dateTime: dateTime.DateTime,
-              hasPrecipitation: dateTime.HasPrecipitation,
-              precipitationProbability: dateTime.PrecipitationProbability,
-              temperatureValue: dateTime.Temperature.Value,
-              temperatureUnit: dateTime.Temperature.Unit,
-              windSpeed: dateTime.Wind.Speed.Value,
-              windDirection: dateTime.Wind.Direction.Degrees,
-              relativeHumidty: dateTime.RelativeHumidity,
-              rainProbability: dateTime.RainProbability,
-              snowProbability: dateTime.SnowProbability,
-              uvIndex: dateTime.UVIndex,
-              rainValue: dateTime.Rain.Value,
-              snowValue: dateTime.Snow.Value,
+    switch (apiSource) {
+      case "accuweather":
+        requestUrl = "http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/" + cityId + "?apikey=" + process.env.ACCUWEATHER_APIKEY + "&language=en-us&metric=true&details=true";
+        request(requestUrl, function(err, response, body) {
+          if (!err) {
+            const data = JSON.parse(body);
+            if (cityName === "istanbul") {
+              data.forEach(function(dateTime) {
+                const forecast12 = new Istanbul({
+                  dataBase: apiSource,
+                  callDate: new Date().toLocaleDateString("tr"),
+                  cityId: req.body.cityName,
+                  dateTime: dateTime.DateTime, //ACCUWEATHER
+                  hasPrecipitation: dateTime.HasPrecipitation,
+                  precipitationProbability: dateTime.PrecipitationProbability,
+                  temperatureValue: dateTime.Temperature.Value,
+                  temperatureUnit: dateTime.Temperature.Unit,
+                  windSpeed: dateTime.Wind.Speed.Value,
+                  windDirection: dateTime.Wind.Direction.Degrees,
+                  relativeHumidty: dateTime.RelativeHumidity,
+                  rainProbability: dateTime.RainProbability,
+                  snowProbability: dateTime.SnowProbability,
+                  uvIndex: dateTime.UVIndex,
+                  rainValue: dateTime.Rain.Value,
+                  snowValue: dateTime.Snow.Value,
+                });
+                console.log(new Date().toLocaleDateString());
+                forecast12.save();
+              });
+
+            } else if (cityName === "ankara") {
+              data.forEach(function(dateTime) {
+                const forecast12 = new Ankara({
+                  dataBase: apiSource,
+                  callDate: new Date().toLocaleDateString(),
+                  cityId: req.body.cityName,
+                  dateTime: dateTime.DateTime,
+                  hasPrecipitation: dateTime.HasPrecipitation,
+                  precipitationProbability: dateTime.PrecipitationProbability,
+                  temperatureValue: dateTime.Temperature.Value,
+                  temperatureUnit: dateTime.Temperature.Unit,
+                  windSpeed: dateTime.Wind.Speed.Value,
+                  windDirection: dateTime.Wind.Direction.Degrees,
+                  relativeHumidty: dateTime.RelativeHumidity,
+                  rainProbability: dateTime.RainProbability,
+                  snowProbability: dateTime.SnowProbability,
+                  uvIndex: dateTime.UVIndex,
+                  rainValue: dateTime.Rain.Value,
+                  snowValue: dateTime.Snow.Value,
+                });
+                forecast12.save();
+              });
+
+            }
+            res.render("result", {
+              route: "result",
+              results: "Başarı!",
+              apiSource: apiSource
             });
-            forecast12.save();
-          });
-        } else if (cityName === "ankara") {
-          data.forEach(function(dateTime) {
-            const forecast12 = new Ankara({
-              dataBase: "Accuweather", //TODO: Add new apiSources and update collection model
-              callDate: new Date(),
-              cityId: req.body.cityName,
-              dateTime: dateTime.DateTime,
-              hasPrecipitation: dateTime.HasPrecipitation,
-              precipitationProbability: dateTime.PrecipitationProbability,
-              temperatureValue: dateTime.Temperature.Value,
-              temperatureUnit: dateTime.Temperature.Unit,
-              windSpeed: dateTime.Wind.Speed.Value,
-              windDirection: dateTime.Wind.Direction.Degrees,
-              relativeHumidty: dateTime.RelativeHumidity,
-              rainProbability: dateTime.RainProbability,
-              snowProbability: dateTime.SnowProbability,
-              uvIndex: dateTime.UVIndex,
-              rainValue: dateTime.Rain.Value,
-              snowValue: dateTime.Snow.Value,
-            });
-            forecast12.save();
-          });
-        }
-        res.render("result", {
-          results: "Başarı!",
-          apiSource: "Accuweather" // TODO: call from variable apiSource
+          }
         });
-      }
-    });
+        break;
+      case "weatherbitHourlyForecast":
+        requestUrl = "https://api.weatherbit.io/v2.0/forecast/hourly?lat=" + lat + "&lon=" + lon + "&key=" + process.env.WEATHERBIT_APIKEY + "&hours=48";
+        request(requestUrl, function(err, response, body){
+          if (!err) {
+            const data = JSON.parse(body).data;
+            if (cityName === "istanbul") {
+              data.forEach(function(dateTime) {
+                console.log(dateTime);
+                const forecast12 = new Istanbul({
+                  dataBase: apiSource,
+                  callDate: new Date().toLocaleDateString(),
+                  cityId: req.body.cityName,
+                  dateTime: dateTime.timestamp_local,
+                  hasPrecipitation: dateTime.precip,
+                  precipitationProbability: dateTime.pop,
+                  temperatureValue: dateTime.temp,
+                  temperatureUnit: "C",
+                  windSpeed: dateTime.wind_spd,
+                  windDirection: dateTime.wind_dir,
+                  relativeHumidty: dateTime.rh,
+                  uvIndex: dateTime.uv,
+                  snowValue: dateTime.snow,
+                  ozone: dateTime.ozone
+                });
+
+                forecast12.save();
+               });
+
+            } else if (cityName === "ankara") {
+              data.forEach(function(dateTime) {
+                const forecast12 = new Ankara({
+                  dataBase: apiSource,
+                  callDate: new Date().toLocaleDateString(),
+                  cityId: req.body.cityName,
+                  dateTime: dateTime.timestamp_local,
+                  hasPrecipitation: dateTime.precip,
+                  precipitationProbability: dateTime.pop,
+                  temperatureValue: dateTime.temp,
+                  temperatureUnit: "C",
+                  windSpeed: dateTime.wind_spd,
+                  windDirection: dateTime.wind_dir,
+                  relativeHumidty: dateTime.rh,
+                  uvIndex: dateTime.uv,
+                  snowValue: dateTime.snow,
+                  ozone: dateTime.ozone
+                });
+
+                forecast12.save();
+               });
+
+            }
+            res.render("result", {
+              route: "result",
+              results: "Başarı!",
+              apiSource: apiSource
+            });
+          }
+        });
+        break;
+      default:
+        res.render("result", {
+          route: "result",
+          results: "Hımmm." // TODO: add more err information
+        });
+    }
   });
 
-app.route("/result")
-  .get(function(req, res) { // NOTE: For test purposes only
-    res.render("result", {
-      results: "Başarı!",
-      apiSource: "Accu" // TODO: call from variable apiSource
-    });
+
+app.route("/download")
+  .get(function(req, res) {
+    const route = "download";
+    if (req.isAuthenticated()) {
+      res.render("download", {
+        route: route
+      });
+    } else {
+      res.redirect("/login");
+    }
   })
+
   .post(function(req, res) {
-    res.redirect("/");
+    //TODO: download post route
+    const apiSource = _.camelCase(req.body.apiSource);
+    const cityName = _.lowerCase(req.body.cityName);
+    const startDate = req.body.startDate;
+    const endDate = req.body.endDate;
+    if (cityName === "ankara") {
+      Ankara.find({dataBase: apiSource}, function(err, docs) {
+        const csvData = myCsv.objectToCsv(docs);
+        console.log(csvData);
+        res.attachment('csvFile.csv');
+        res.type("csv");
+        res.send(csvData);
+      });
+    } else if (cityName === "istanbul") {
+      Istanbul.find({dataBase: apiSource}, function(err, docs) {
+        const csvData = myCsv.objectToCsv(docs);
+        console.log(csvData);
+        res.attachment('csvFile.csv');
+        res.type("csv");
+        res.send(csvData);
+      });
+    } else {
+      res.send("some error here");
+    }
+
   });
 
-  let port = process.env.PORT;
-  if (port == null || port == "") {
-    port = 3000;
-  }
+
+app.post("/result", function(req, res) {
+  res.redirect("/");
+});
 
 
-  app.listen(port, function() {
-    console.log("Server has started succesfully");
-  });
+
+//listen
+let port = process.env.PORT;
+if (port == null || port == "") {
+  port = 4000;
+}
+app.listen(port, function() {
+  console.log("Server started on port " + port + ".");
+});

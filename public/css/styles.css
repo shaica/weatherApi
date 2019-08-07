@@ -9,6 +9,10 @@ input {
   text-align: center;
 }
 
+footer {
+  margin: 2rem auto 0;
+}
+
 nav {
   background-color: #bf9fee;
 }
@@ -27,7 +31,7 @@ select {
 }
 
 .center {
-  margin: 5rem auto 0;
+  margin: 2rem auto 0;
 }
 
 .form-control {
@@ -49,6 +53,7 @@ a.navbar-brand{
   color: #313131;
   font-size: 2rem;
 }
+
 /* // Extra small devices (portrait phones, less than 576px)
 // No media query for `xs` since this is the default in Bootstrap
 
