@@ -41,17 +41,17 @@ app.use(passport.session());
 
 //Database stuff
 //connect to db
-// mongoose.connect("mongodb://localhost:27017/accuAPI", {
-//   useNewUrlParser: true,
-//   useCreateIndex: true
-// });
-//NOTE: Uncomment before heroku
-const mongodbUrl = "mongodb+srv://admin-ezgi:" + process.env.ADMIN_EZGI + "@cluster0-l9wx7.mongodb.net/weatherAPI";
-mongoose.connect(mongodbUrl, {
+mongoose.connect("mongodb://localhost:27017/accuAPI", {
   useNewUrlParser: true,
-  useFindAndModify: false,
   useCreateIndex: true
 });
+//NOTE: Uncomment before heroku
+// const mongodbUrl = "mongodb+srv://admin-ezgi:" + process.env.ADMIN_EZGI + "@cluster0-l9wx7.mongodb.net/weatherAPI";
+// mongoose.connect(mongodbUrl, {
+//   useNewUrlParser: true,
+//   useFindAndModify: false,
+//   useCreateIndex: true
+// });
 
 //mongoose schemas
 const userSchema = new mongoose.Schema({
@@ -61,7 +61,7 @@ const userSchema = new mongoose.Schema({
 
 const forecastSchema = new mongoose.Schema({
   dataBase: String,
-  callDate: Date, // FIXME: GMT +3 doesn't show
+  callDate: Date,
   cityId: String,
   dateTime: Date,
   hasPrecipitation: Boolean,
@@ -178,6 +178,8 @@ app.route("/")
   .post(function(req, res) {
     const apiSource = _.camelCase(req.body.apiSource);
     const cityName = _.camelCase(req.body.cityName);
+    const callDate = new Date().getTime();
+    console.log(callDate);
     switch (cityName) {
       case "ankara":
         cityId = 316938;
@@ -205,7 +207,7 @@ app.route("/")
               data.forEach(function(dateTime) {
                 const forecast12 = new Istanbul({
                   dataBase: apiSource,
-                  callDate: new Date().toLocaleDateString("tr"),
+                  callDate: callDate,
                   cityId: req.body.cityName,
                   dateTime: dateTime.DateTime, //ACCUWEATHER
                   hasPrecipitation: dateTime.HasPrecipitation,
@@ -221,15 +223,16 @@ app.route("/")
                   rainValue: dateTime.Rain.Value,
                   snowValue: dateTime.Snow.Value,
                 });
-                console.log(new Date().toLocaleDateString());
                 forecast12.save();
+                console.log(callDate);
+                console.log("success");
               });
 
             } else if (cityName === "ankara") {
               data.forEach(function(dateTime) {
                 const forecast12 = new Ankara({
                   dataBase: apiSource,
-                  callDate: new Date().toLocaleDateString(),
+                  callDate: callDate,
                   cityId: req.body.cityName,
                   dateTime: dateTime.DateTime,
                   hasPrecipitation: dateTime.HasPrecipitation,
@@ -245,6 +248,7 @@ app.route("/")
                   rainValue: dateTime.Rain.Value,
                   snowValue: dateTime.Snow.Value,
                 });
+                console.log(forecast12);
                 forecast12.save();
               });
 
@@ -259,18 +263,17 @@ app.route("/")
         break;
       case "weatherbitHourlyForecast":
         requestUrl = "https://api.weatherbit.io/v2.0/forecast/hourly?lat=" + lat + "&lon=" + lon + "&key=" + process.env.WEATHERBIT_APIKEY + "&hours=48";
+        // console.log(requestUrl);
         request(requestUrl, function(err, response, body){
           if (!err) {
             const data = JSON.parse(body).data;
             if (cityName === "istanbul") {
               data.forEach(function(dateTime) {
-                console.log(dateTime);
-                const forecast12 = new Istanbul({
+                const forecast48 = new Istanbul({
                   dataBase: apiSource,
-                  callDate: new Date().toLocaleDateString(),
+                  callDate: callDate,
                   cityId: req.body.cityName,
                   dateTime: dateTime.timestamp_local,
-                  hasPrecipitation: dateTime.precip,
                   precipitationProbability: dateTime.pop,
                   temperatureValue: dateTime.temp,
                   temperatureUnit: "C",
@@ -282,17 +285,16 @@ app.route("/")
                   ozone: dateTime.ozone
                 });
 
-                forecast12.save();
+                forecast48.save();
                });
 
             } else if (cityName === "ankara") {
               data.forEach(function(dateTime) {
-                const forecast12 = new Ankara({
+                const forecast48 = new Ankara({
                   dataBase: apiSource,
-                  callDate: new Date().toLocaleDateString(),
+                  callDate: callDate,
                   cityId: req.body.cityName,
                   dateTime: dateTime.timestamp_local,
-                  hasPrecipitation: dateTime.precip,
                   precipitationProbability: dateTime.pop,
                   temperatureValue: dateTime.temp,
                   temperatureUnit: "C",
@@ -303,8 +305,7 @@ app.route("/")
                   snowValue: dateTime.snow,
                   ozone: dateTime.ozone
                 });
-
-                forecast12.save();
+                forecast48.save();
                });
 
             }
@@ -338,13 +339,13 @@ app.route("/download")
   })
 
   .post(function(req, res) {
-    //TODO: download post route
     const apiSource = _.camelCase(req.body.apiSource);
     const cityName = _.lowerCase(req.body.cityName);
     const startDate = req.body.startDate;
     const endDate = req.body.endDate;
+    console.log(startDate);
     if (cityName === "ankara") {
-      Ankara.find({dataBase: apiSource}, function(err, docs) {
+      Ankara.find({"dataBase": apiSource, "callDate": {$gt: new Date(startDate), $lt: new Date(endDate)}}, function(err, docs) {
         const csvData = myCsv.objectToCsv(docs);
         console.log(csvData);
         res.attachment('csvFile.csv');
@@ -352,7 +353,7 @@ app.route("/download")
         res.send(csvData);
       });
     } else if (cityName === "istanbul") {
-      Istanbul.find({dataBase: apiSource}, function(err, docs) {
+      Istanbul.find({"dataBase": apiSource, "callDate": {$gt: new Date(startDate), $lt: new Date(endDate)}}, function(err, docs) {
         const csvData = myCsv.objectToCsv(docs);
         console.log(csvData);
         res.attachment('csvFile.csv');
