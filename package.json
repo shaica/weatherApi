@@ -19,7 +19,7 @@
     "express-session": "^1.16.2",
     "intl": "^1.2.5",
     "lodash": "^4.17.15",
-    "mongoose": "^5.5.14",
+    "mongoose": "^5.7.5",
     "mongoose-encryption": "^2.0.2",
     "mongoose-findorcreate": "^3.0.0",
     "passport": "^0.4.0",
