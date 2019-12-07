@@ -41,17 +41,17 @@ app.use(passport.session());
 
 //Database stuff
 //connect to db
-mongoose.connect("mongodb://localhost:27017/accuAPI", {
-  useNewUrlParser: true,
-  useCreateIndex: true
-});
-//NOTE: Uncomment before heroku
-// const mongodbUrl = "mongodb+srv://admin-ezgi:" + process.env.ADMIN_EZGI + "@cluster0-l9wx7.mongodb.net/weatherAPI";
-// mongoose.connect(mongodbUrl, {
+// mongoose.connect("mongodb://localhost:27017/accuAPI", {
 //   useNewUrlParser: true,
-//   useFindAndModify: false,
 //   useCreateIndex: true
 // });
+//NOTE: Uncomment before heroku
+const mongodbUrl = "mongodb+srv://admin-ezgi:" + process.env.ADMIN_EZGI + "@cluster0-l9wx7.mongodb.net/weatherAPI";
+mongoose.connect(mongodbUrl, {
+  useNewUrlParser: true,
+  useFindAndModify: false,
+  useCreateIndex: true
+});
 
 //mongoose schemas
 const userSchema = new mongoose.Schema({
