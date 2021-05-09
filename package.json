@@ -18,7 +18,7 @@
     "express-csv": "^0.6.0",
     "express-session": "^1.17.0",
     "intl": "^1.2.5",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.21",
     "mongoose": "^5.7.13",
     "mongoose-encryption": "^2.0.2",
     "mongoose-findorcreate": "^3.0.0",
