@@ -14,7 +14,7 @@
     "body-parser": "^1.19.0",
     "dotenv": "^8.0.0",
     "ejs": "^2.7.4",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "express-csv": "^0.6.0",
     "express-session": "^1.17.0",
     "intl": "^1.2.5",
